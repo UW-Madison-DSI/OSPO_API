@@ -1,0 +1,287 @@
+openapi: '3.0.3'
+info:
+  title: API Title
+  version: '1.0'
+security:
+  - apiKey: []
+servers:
+  - url: http://localhost:3005
+paths:
+  /v1.0/data/repos/stats/creation:
+    get:
+      description: Gets statistics for repository creation over time.
+      parameters:
+        - description: Split by University of Wisconsin
+          in: query
+          required: false
+          name: wisc
+          schema:
+            type: boolean
+        - description: Granularity
+          in: query
+          required: false
+          name: period
+          schema:
+            type: string
+            enum: [day, month, year]
+      responses:
+        '200':
+          description: A list of dates with the count of repositories created on that date.
+          content:
+            "application/json":
+              schema:
+                $ref: '#/components/schemas/annual_counts'
+        '406':
+          description: Response was not acceptable. The user asked for data in a format not provided by the API.
+          content:
+            "application/json":
+              schema:
+                $ref: '#/components/schemas/406response'
+        '429':
+          description: User has sent too many API requests too quickly.
+          content:
+            "application/json":
+              schema:
+                type: string
+                maxLength: 200
+                pattern: '^[\w\.-]+$'
+        '500':
+          description: Response failed due to server error.
+          content:
+            "application/json":
+              schema:
+                type: string
+                maxLength: 200
+                pattern: '^[\w\.-]+$'      
+        
+  /v1.0/data/repos/stats/last_push:
+    get:
+      description: Get the statistics for repository activity by repository hosting organization.
+      parameters:
+        - description: Repository host.
+          in: query
+          required: false
+          name: host
+          schema:
+            type: string
+            maxLength: 20
+            pattern: '[\w-]+'
+            example: GitHub
+            enum: [GitHub, GitLab -- UW, BitBucket]
+      responses:
+        '200':
+          description: A list of sources repositories have been pulled from.
+          content:
+            "application/json":
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/annual_counts'
+                maxItems: 5
+        '406':
+          description: Response was not acceptable. The user asked for data in a format not provided by the API.
+          content:
+            "application/json":
+              schema:
+                $ref: '#/components/schemas/406response'
+        '429':
+          description: User has sent too many API requests too quickly.
+          content:
+            "application/json":
+              schema:
+                type: string
+                maxLength: 200
+                pattern: '^[\w\.-]+$'
+        '500':
+          description: Response failed due to server error.
+          content:
+            "application/json":
+              schema:
+                type: string
+                maxLength: 200
+                pattern: '^[\w\.-]+$'      
+  /v1.0/data/repos:
+    get:
+      description: Get repositories based on set query parameters.
+      parameters:
+        - description: Repository owner name, wildcard (%) use is allowed.
+          in: query
+          name: owner
+          required: false
+          schema:
+            type: string
+            pattern: '[\w\.%]+'
+            maxLength: 40
+      responses:
+        '200':
+          description: A list of sources repositories have been pulled from.
+          content:
+            "application/json":
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/osposource'
+                maxItems: 5
+        '406':
+          description: Response was not acceptable. The user asked for data in a format not provided by the API.
+          content:
+            "application/json":
+              schema:
+                $ref: '#/components/schemas/406response'
+        '429':
+          description: User has sent too many API requests too quickly.
+          content:
+            "application/json":
+              schema:
+                type: string
+                maxLength: 200
+                pattern: '^[\w\.-]+$'
+        '500':
+          description: Response failed due to server error.
+          content:
+            "application/json":
+              schema:
+                type: string
+                maxLength: 200
+                pattern: '^[\w\.-]+$'
+  /v1.0/data/repos/sources:
+    get:
+      description: Describes the set of sources from which the OSPO data has been obtained.
+      responses:
+        '200':
+          description: A list of sources repositories have been pulled from.
+          content:
+            "application/json":
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/osposource'
+                maxItems: 5
+        '406':
+          description: Response was not acceptable. The user asked for data in a format not provided by the API.
+          content:
+            "application/json":
+              schema:
+                $ref: '#/components/schemas/406response'
+        '429':
+          description: User has sent too many API requests too quickly.
+          content:
+            "application/json":
+              schema:
+                type: string
+                maxLength: 200
+                pattern: '^[\w\.-]+$'
+        '500':
+          description: Response failed due to server error.
+          content:
+            "application/json":
+              schema:
+                type: string
+                maxLength: 200
+                pattern: '^[\w\.-]+$'
+components:
+  securitySchemes:
+    apiKey:
+      type: apiKey
+      name: X-API-Key
+      in: cookie
+  parameters:
+    ownerQuery:
+      description: A (postgres) search string for the repository owner.
+      name: owner
+      in: query
+      required: false
+      schema:
+        type: string
+        pattern: '^[\w\.\-%]+$'
+        maxLength: 39
+  schemas:
+    404response:
+      type: object
+      properties:
+        status:
+          $ref: '#/components/schemas/status'
+        message:
+          $ref: '#/components/schemas/message'
+        path:
+          $ref:  '#/components/schemas/url'
+    406response:
+      type: object
+      additionalProperties: false
+      properties:
+        status:
+          $ref: '#/components/schemas/status'
+        message:
+          $ref: '#/components/schemas/message'
+        requested:
+          $ref:  '#/components/schemas/content'
+    content:
+      type: string
+      description: A valid content header.
+      example: application/json
+      pattern: '[a-z\/]*'
+      maxLength: 50
+    ownername:
+      type: string
+      pattern: '^[\w\.-]+$'
+      maxLength: 39
+    repositoryname:
+      type: string
+      pattern: ^[\w\.-]+$
+      maxLength: 100
+    url:
+      type: string
+      format: url
+      pattern: https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)
+      maxLength: 2048
+    status:
+      type: string
+      enum: [success, failure]
+    message:
+      type: string
+      pattern: '[A-Za-z 0-9\.]'
+      example: A valid message.
+      maxLength: 500
+    osposource:
+      type: object
+      additionalProperties: false
+      properties:
+        sourceid:
+          type: integer
+          minimum: 1
+          maximum: 4
+        sourcename:
+          type: string
+          pattern: '[A-Za-z 0-9]*\.'
+          example: Direct Submission
+          maxLength: 200
+        sourcedescription:
+          type: string
+          pattern: '[A-Za-z 0-9]*\.'
+          example: The object was submitted by a user via an API or website.
+          maxLength: 200
+    repository:
+      type: object
+      additionalProperties: false
+      properties:
+        owner:
+          $ref: '#/components/schemas/ownername'
+        url:
+          $ref: '#/components/schemas/url'
+        repository:
+          $ref: '#/components/schemas/repositoryname'
+    annual_counts:
+      type: array
+      items:
+        type: object
+        properties:
+          year:
+            type: integer
+            minimum: 0
+            maximum: 2029
+          repositories:
+            type: integer
+            minimum: 0
+            maximum: 1000000
+          wisconsin:
+            type: boolean
